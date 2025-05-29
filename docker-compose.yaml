@@ -1,0 +1,125 @@
+services:
+  # ======================
+  # SERVIDOR PHP/APACHE
+  # ======================
+  php:
+    build:
+      context: ./php # Caminho até a pasta onde está o Dockerfile
+      dockerfile: Dockerfile # Nome do Dockerfile a ser usado
+
+    container_name: marcelo-ifsp-php # Nome do container para facilitar identificação
+    restart: always # Reinicia automático se o container cair
+
+    volumes:
+      - ./web:/var/www/html/ # Mapeia a pasta local ./web pro /var/www/html dentro do container
+
+    networks:
+      - lamb-network # Coloca o container na rede personalizada
+
+    ports:
+      - "80:80" # Expõe a porta 80 (Apache) no host
+
+    links:
+      - mysql # Cria link com o MySQL (opcional, mas pode facilitar)
+      - postgres # Cria link com o PostgreSQL
+
+  # ======================
+  # SERVIDOR POSTGRESQL
+  # ======================
+  postgres:
+    image: postgres:12 # Usa a imagem oficial do PostgreSQL (versão 12)
+    container_name: marcelo-ifsp-psql
+    restart: always
+
+    environment:
+      POSTGRES_PASSWORD: postdba # Define a senha do superusuário
+      POSTGRES_USER: postgres # Nome do usuário padrão
+
+    ports:
+      - "5432:5432" # Mapeia porta 5432 padrão do PostgreSQL
+
+    volumes:
+      - ./postgres:/var/lib/postgresql/data # Pasta local pra persistência dos dados
+
+    networks:
+      - lamb-network
+
+  # ======================
+  # INTERFACE WEB PGADMIN
+  # ======================
+  pgadmin:
+    image: dpage/pgadmin4 # Interface gráfica para o PostgreSQL
+    container_name: marcelo-ifsp-pgadmin
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: postgres@servidor.com # E-mail padrão de login
+      PGADMIN_DEFAULT_PASSWORD: postdba # Senha padrão de login
+
+    ports:
+      - 8081:80 # Abre no navegador via localhost:8081
+
+    depends_on:
+      - postgres # Garante que o PostgreSQL suba antes do pgAdmin
+    networks:
+      - lamb-network
+
+  # ======================
+  # SERVIDOR MYSQL
+  # ======================
+  mysql:
+    image: mysql:5.7 # Usando versão 5.7 (mais estável que a 8.0 em alguns casos)
+    container_name: marcelo-ifsp-mysql
+    restart: always
+
+    volumes:
+      - ./mysql:/var/lib/mysql # Persistência de dados no host
+
+    ports:
+      - "3306:3306" # Porta padrão para conexões com o MySQL
+
+    environment:
+      MYSQL_ROOT_PASSWORD: root # Senha do root
+      MYSQL_DATABASE: test # Banco criado automaticamente ao iniciar
+
+    networks:
+      - lamb-network
+
+  # ======================
+  # INTERFACE WEB PHPMYADMIN
+  # ======================
+  phpmyadmin:
+    build:
+      context: ./phpmyadmin # Caminho até os arquivos do phpMyAdmin
+      dockerfile: Dockerfile # Dockerfile do phpMyAdmin
+
+    container_name: marcelo-ifsp-phpmyadmin
+    restart: always
+
+    volumes:
+      - /sessions # Volume para sessões da interface (opcional)
+
+    ports:
+      - "8080:80" # Acesso via localhost:8080
+
+    links:
+      - mysql # Conexão direta com o container MySQL
+
+    environment:
+      PMA_ARBITRARY: 0 # Define se pode informar o host manualmente (0 = não, 1 = sim)
+      PMA_HOST: mysql # Nome do serviço MySQL que será usado como host padrão
+
+    networks:
+      - lamb-network
+
+# ======================
+# DEFINIÇÃO DA REDE
+# ======================
+networks:
+  lamb-network:
+    driver: bridge # Rede do tipo "bridge", isolada e comum em dev
+
+volumes:
+  postgres:
+  mysql:
+  web:
+    driver: local
