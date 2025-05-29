@@ -119,7 +119,10 @@ networks:
     driver: bridge # Rede do tipo "bridge", isolada e comum em dev
 
 volumes:
-  postgres:
-  mysql:
-  web:
-    driver: local
+
+  postgres:              # Volume nomeado para persistir dados do container PostgreSQL
+  mysql:                 # Volume nomeado para persistir dados do container MySQL
+
+  web:                   # Volume nomeado para os arquivos da aplicação web
+    driver: local        # Define que o volume usará o driver local (padrão do Docker)
+
